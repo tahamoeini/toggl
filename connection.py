@@ -4,7 +4,9 @@ from pick import pick
 import pytz
 import urllib
 import datetime
-import secrets
+from secrets import key, maxDurationOfProjects
+
+f = open("times.txt", "w")
 
 api = 'https://api.track.toggl.com/api/'
 apiVersion = 'v8'
@@ -15,10 +17,12 @@ startDate = endDate - datetime.timedelta(days=7)
 endDate = str(endDate.replace(microsecond=0).isoformat())
 startDate = str(startDate.replace(microsecond=0).isoformat())
 
-if secrets.singleWorkSpace:
-    workspaceId = secrets.singleWorkSpace
-else:
-    workspaces = requests.get(apiUrl+'workspaces', auth=(secrets.key, 'api_token')).json()
+try:
+    from secrets import singleWorkSpace
+    workspaceId = singleWorkSpace
+except:
+    workspaces = requests.get(
+        apiUrl+'workspaces', auth=(key, 'api_token')).json()
 
     workspacesList = {}
     for workspace in workspaces:
@@ -44,7 +48,7 @@ class Project:
 
 
 projects = requests.get(apiUrl+'workspaces/' + str(workspaceId) + '/projects',
-                        auth=(secrets.key, 'api_token')).json()
+                        auth=(key, 'api_token')).json()
 
 projectsList = {}
 
@@ -55,27 +59,36 @@ for project in projects:
     })
 
 timeEntries = requests.get(apiUrl+urllib.parse.quote('time_entries?start_date=' +
-                           startDate+'&end_date='+endDate, safe='=?&'), auth=(secrets.key, 'api_token')).json()
+                           startDate+'&end_date='+endDate, safe='=?&'), auth=(key, 'api_token')).json()
+
+totalMonthTime = 0
 
 for timeEntry in timeEntries:
     projectId = timeEntry['pid']
-    project = projectsList[projectId]
-    project.duration += timeEntry['duration']
-    projectsList.update({
-        project.id: project,
-    })
+    try:
+        project = projectsList[projectId]
+        project.duration += timeEntry['duration']
+        projectsList.update({
+            project.id: project,
+        })
+        totalMonthTime += timeEntry['duration']
+    except:
+        pass
 
-if secrets.maxDurationOfProjects:
+if maxDurationOfProjects:
     for project in projectsList.values():
         try:
-            secrets.maxDurationOfProjects[project.name]
+            maxDurationOfProjects[project.name]
         except:
-            secrets.maxDurationOfProjects.update({
+            maxDurationOfProjects.update({
                 project.name: 0,
             })
-        if secrets.maxDurationOfProjects[project.name] < project.duration/3600:
-            print(project.name+': '+str(math.ceil(project.duration/360)/10)+'h - OverDo! with ' +
-                  str(math.ceil((project.duration/3600 - secrets.maxDurationOfProjects[project.name])*10)/10)+'h exceeded')
+        if maxDurationOfProjects[project.name] < project.duration/3600:
+            f.write(project.name+': '+str(math.ceil(project.duration/360)/10)+'h - OverDo! with ' +
+                    str(math.ceil((project.duration/3600 - maxDurationOfProjects[project.name])*10)/10)+'h exceeded\n')
         else:
-            print(project.name+': ' +
-                  str(math.ceil(project.duration/360)/10)+'h - Good...')
+            f.write(project.name+': ' +
+                    str(math.ceil(project.duration/360)/10)+'h - Good...\n')
+
+f.write('Total Time: '+str(math.ceil(totalMonthTime/360)/10)+'h')
+f.close()

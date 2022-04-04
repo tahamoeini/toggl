@@ -1,6 +1,7 @@
 *.code-workspace
 env/
 secrets.py
+times.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
