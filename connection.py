@@ -4,7 +4,7 @@ from pick import pick
 import pytz
 import urllib
 import datetime
-from secrets import key, maxDurationOfProjects
+from secrets import key, maxDurationOfProjects, minDurationOfProjects
 
 f = open("times.txt", "w")
 
@@ -75,7 +75,31 @@ for timeEntry in timeEntries:
     except:
         pass
 
-if maxDurationOfProjects:
+if maxDurationOfProjects and minDurationOfProjects:
+    for project in projectsList.values():
+        try:
+            maxDurationOfProjects[project.name]
+            minDurationOfProjects[project.name]
+        except:
+            try:
+                maxDurationOfProjects[project.name]
+            except:
+                maxDurationOfProjects.update({
+                    project.name: 0,
+                })
+            minDurationOfProjects.update({
+                project.name: 0,
+            })
+        if maxDurationOfProjects[project.name] < project.duration/3600:
+            f.write(project.name+': '+str(math.ceil(project.duration/360)/10)+'h - OverDo! with ' +
+                    str(math.ceil((project.duration/3600 - maxDurationOfProjects[project.name])*10)/10)+'h exceeded\n')
+        elif minDurationOfProjects[project.name] > project.duration/3600:
+            f.write(project.name+': ' + str(math.ceil(project.duration/360)/10)+'h - Work More! You need ' +
+                    str(math.ceil((minDurationOfProjects[project.name] - project.duration/3600)*10)/10)+'h more to reach your goal\n')
+        else:
+            f.write(project.name+': ' +
+                    str(math.ceil(project.duration/360)/10)+'h - Good...\n')
+elif maxDurationOfProjects:
     for project in projectsList.values():
         try:
             maxDurationOfProjects[project.name]
